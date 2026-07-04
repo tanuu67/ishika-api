@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro API Studio - Demo</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #121212; color: #e0e0e0; margin: 0; padding: 30px 15px; }
+        .container { max-width: 900px; margin: 0 auto; background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #333; }
+        h2 { margin-top: 0; color: #00d2ff; text-align: center; }
+        .request-bar { display: flex; gap: 10px; margin: 20px 0; }
+        select, input, button { padding: 12px 15px; border: none; border-radius: 6px; font-size: 15px; outline: none; }
+        select { background-color: #333; color: #00d2ff; font-weight: bold; border: 1px solid #444; cursor: pointer; }
+        input { flex: 1; background-color: #2d2d2d; color: white; border: 1px solid #444; }
+        input:focus, textarea:focus { border-color: #00d2ff; }
+        button { background-color: #007acc; color: white; font-weight: bold; cursor: pointer; width: 120px; transition: 0.2s; }
+        button:hover { background-color: #005f9e; }
+        textarea { width: 100%; height: 120px; background-color: #2d2d2d; color: #a6e22e; border: 1px solid #444; border-radius: 6px; padding: 15px; font-family: monospace; box-sizing: border-box; resize: vertical; }
+        .meta-info { display: flex; gap: 15px; margin-bottom: 10px; font-size: 14px; align-items: center; }
+        .badge { padding: 6px 12px; border-radius: 4px; font-weight: bold; background: #444; color: white; }
+        .success { background-color: #28a745; }
+        .error { background-color: #dc3545; }
+        .response-box { background-color: #000000; color: #00d2ff; padding: 20px; border-radius: 6px; min-height: 150px; overflow-x: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚀 Pro API Studio</h2>
+    
+    <div class="request-bar">
+        <select id="method">
+            <option value="GET">GET</option>
+            <option value="POST">POST</option>
+        </select>
+        <input type="text" id="url" placeholder="Enter API URL here..." value="https://jsonplaceholder.typicode.com/users/1">
+        <button id="sendBtn" onclick="sendRequest()">Send</button>
+    </div>
+
+    <label style="color:#aaa; font-size:14px; margin-bottom:8px; display:block;">Request Body (JSON format - For POST requests only)</label>
+    <textarea id="body" placeholder='{&#10;  "name": "Demo User",&#10;  "role": "Testing"&#10;}'></textarea>
+
+    <hr style="border:0; height:1px; background:#333; margin:25px 0;">
+
+    <div class="meta-info">
+        <span class="badge" id="statusBadge">Status: ---</span>
+        <span class="badge" id="timeBadge">Time: 0 ms</span>
+    </div>
+    <div class="response-box" id="responseOutput">Waiting for request... Hit 'Send' to test.</div>
+</div>
+
+<script>
+    async function sendRequest() {
+        const method = document.getElementById('method').value;
+        const url = document.getElementById('url').value;
+        const bodyInput = document.getElementById('body').value;
+        const responseOutput = document.getElementById('responseOutput');
+        const statusBadge = document.getElementById('statusBadge');
+        const timeBadge = document.getElementById('timeBadge');
+        const sendBtn = document.getElementById('sendBtn');
+
+        // Reset UI for loading state
+        sendBtn.textContent = "Sending...";
+        sendBtn.style.opacity = "0.7";
+        responseOutput.style.color = "#888";
+        responseOutput.textContent = "Fetching data from server. Please wait...";
+        statusBadge.className = "badge";
+        statusBadge.textContent = "Status: Loading...";
+        timeBadge.textContent = "Time: ...";
+
+        let options = {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
+
+        // Validate JSON body for POST requests
+        if (method === 'POST' && bodyInput.trim() !== '') {
+            try {
+                // Ensure the input is valid JSON
+                options.body = JSON.stringify(JSON.parse(bodyInput));
+            } catch (e) {
+                displayError("Invalid JSON format in the Request Body. Please check your syntax.");
+                return;
+            }
+        }
+
+        const startTime = performance.now();
+
+        try {
+            const response = await fetch(url, options);
+            const endTime = performance.now();
+            
+            // Update UI with results
+            statusBadge.textContent = `Status: ${response.status} ${response.statusText}`;
+            statusBadge.className = response.ok ? "badge success" : "badge error";
+            timeBadge.textContent = `Time: ${Math.round(endTime - startTime)} ms`;
+
+            const textData = await response.text();
+            responseOutput.style.color = "#00d2ff"; // Reset color to neon blue
+
+            try {
+                // Try parsing as JSON for pretty printing
+                const jsonData = JSON.parse(textData);
+                responseOutput.textContent = JSON.stringify(jsonData, null, 4);
+            } catch {
+                // Display raw text if not JSON
+                responseOutput.textContent = textData || "Success, but the server returned no data.";
+            }
+
+        } catch (error) {
+            displayError(`Network Error: Failed to fetch resource.\n\nPossible reasons:\n1. The URL is incorrect or the server is down.\n2. Cross-Origin Resource Sharing (CORS) policy is blocking the request.\n3. There is no active internet connection.\n\nTechnical details: ${error.message}`);
+        }
+
+        // Restore button state
+        sendBtn.textContent = "Send";
+        sendBtn.style.opacity = "1";
+    }
+
+    function displayError(errorMessage) {
+        document.getElementById('statusBadge').className = "badge error";
+        document.getElementById('statusBadge').textContent = "Status: Connection Failed";
+        document.getElementById('timeBadge').textContent = "Time: N/A";
+        document.getElementById('responseOutput').style.color = "#ff5555";
+        document.getElementById('responseOutput').textContent = "🚨 " + errorMessage;
+        document.getElementById('sendBtn').textContent = "Send";
+        document.getElementById('sendBtn').style.opacity = "1";
+    }
+</script>
+
+</body>
+</html>

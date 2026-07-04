@@ -13,13 +13,21 @@
         select { background-color: #333; color: #00d2ff; font-weight: bold; border: 1px solid #444; cursor: pointer; }
         input { flex: 1; background-color: #2d2d2d; color: white; border: 1px solid #444; }
         input:focus, textarea:focus { border-color: #00d2ff; }
-        button { background-color: #007acc; color: white; font-weight: bold; cursor: pointer; width: 120px; transition: 0.2s; }
-        button:hover { background-color: #005f9e; }
+        .btn-primary { background-color: #007acc; color: white; font-weight: bold; cursor: pointer; width: 120px; transition: 0.2s; }
+        .btn-primary:hover { background-color: #005f9e; }
         textarea { width: 100%; height: 120px; background-color: #2d2d2d; color: #a6e22e; border: 1px solid #444; border-radius: 6px; padding: 15px; font-family: monospace; box-sizing: border-box; resize: vertical; }
-        .meta-info { display: flex; gap: 15px; margin-bottom: 10px; font-size: 14px; align-items: center; }
+        
+        /* New Header Section for Response */
+        .response-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .meta-info { display: flex; gap: 15px; font-size: 14px; align-items: center; }
         .badge { padding: 6px 12px; border-radius: 4px; font-weight: bold; background: #444; color: white; }
         .success { background-color: #28a745; }
         .error { background-color: #dc3545; }
+        
+        /* Download Button Style */
+        .btn-download { background-color: #2d2d2d; color: #00d2ff; border: 1px solid #00d2ff; font-weight: bold; cursor: pointer; transition: 0.2s; padding: 8px 15px; border-radius: 4px; font-size: 14px; }
+        .btn-download:hover { background-color: #00d2ff; color: #000; }
+        
         .response-box { background-color: #000000; color: #00d2ff; padding: 20px; border-radius: 6px; min-height: 150px; overflow-x: auto; font-family: monospace; white-space: pre-wrap; border: 1px solid #333; }
     </style>
 </head>
@@ -33,8 +41,8 @@
             <option value="GET">GET</option>
             <option value="POST">POST</option>
         </select>
-        <input type="text" id="url" placeholder="Enter API URL here..." value="https://jsonplaceholder.typicode.com/users/1">
-        <button id="sendBtn" onclick="sendRequest()">Send</button>
+        <input type="text" id="url" placeholder="Enter API URL here..." value="https://api.github.com/users/google">
+        <button class="btn-primary" id="sendBtn" onclick="sendRequest()">Send</button>
     </div>
 
     <label style="color:#aaa; font-size:14px; margin-bottom:8px; display:block;">Request Body (JSON format - For POST requests only)</label>
@@ -42,9 +50,12 @@
 
     <hr style="border:0; height:1px; background:#333; margin:25px 0;">
 
-    <div class="meta-info">
-        <span class="badge" id="statusBadge">Status: ---</span>
-        <span class="badge" id="timeBadge">Time: 0 ms</span>
+    <div class="response-header">
+        <div class="meta-info">
+            <span class="badge" id="statusBadge">Status: ---</span>
+            <span class="badge" id="timeBadge">Time: 0 ms</span>
+        </div>
+        <button class="btn-download" onclick="downloadResponse()">📥 Download Result</button>
     </div>
     <div class="response-box" id="responseOutput">Waiting for request... Hit 'Send' to test.</div>
 </div>
@@ -75,10 +86,8 @@
             }
         };
 
-        // Validate JSON body for POST requests
         if (method === 'POST' && bodyInput.trim() !== '') {
             try {
-                // Ensure the input is valid JSON
                 options.body = JSON.stringify(JSON.parse(bodyInput));
             } catch (e) {
                 displayError("Invalid JSON format in the Request Body. Please check your syntax.");
@@ -92,20 +101,17 @@
             const response = await fetch(url, options);
             const endTime = performance.now();
             
-            // Update UI with results
             statusBadge.textContent = `Status: ${response.status} ${response.statusText}`;
             statusBadge.className = response.ok ? "badge success" : "badge error";
             timeBadge.textContent = `Time: ${Math.round(endTime - startTime)} ms`;
 
             const textData = await response.text();
-            responseOutput.style.color = "#00d2ff"; // Reset color to neon blue
+            responseOutput.style.color = "#00d2ff";
 
             try {
-                // Try parsing as JSON for pretty printing
                 const jsonData = JSON.parse(textData);
                 responseOutput.textContent = JSON.stringify(jsonData, null, 4);
             } catch {
-                // Display raw text if not JSON
                 responseOutput.textContent = textData || "Success, but the server returned no data.";
             }
 
@@ -113,7 +119,6 @@
             displayError(`Network Error: Failed to fetch resource.\n\nPossible reasons:\n1. The URL is incorrect or the server is down.\n2. Cross-Origin Resource Sharing (CORS) policy is blocking the request.\n3. There is no active internet connection.\n\nTechnical details: ${error.message}`);
         }
 
-        // Restore button state
         sendBtn.textContent = "Send";
         sendBtn.style.opacity = "1";
     }
@@ -127,7 +132,22 @@
         document.getElementById('sendBtn').textContent = "Send";
         document.getElementById('sendBtn').style.opacity = "1";
     }
-</script>
 
-</body>
-</html>
+    // New Function to Download Data
+    function downloadResponse() {
+        const content = document.getElementById('responseOutput').textContent;
+        
+        // Prevent downloading if there is no real data
+        if (content.includes("Waiting for request") || content.includes("Fetching data") || content.startsWith("🚨")) {
+            alert("Please send a successful request first before downloading!");
+            return;
+        }
+
+        // Create a blob file with the text content
+        const blob = new Blob([content], { type: "text/plain" });
+        const downloadUrl = URL.createObjectURL(blob);
+        
+        // Create an invisible link and click it to trigger download
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = "api-
